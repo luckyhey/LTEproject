@@ -1,0 +1,64 @@
+void main(void)
+{
+	TSC_init();
+	//Device_Interrupt_init();
+	//IntcInitialise();
+
+
+    unsigned int ok_flag = 1;
+    unsigned int i;
+
+    unsigned int user_index;
+    unsigned int* ssc_data_ptr;
+    unsigned char total_symbol;
+    unsigned int fftc_output_data_address[NUM_RX_DESC];
+    //unsigned int dft_list[6 * NUM_ANTENNA_PORT_4];
+    unsigned char * rsgen_output_buffer[6];
+    signed int * precoding_data_buffer[NUM_ANTENNA_PORT_2];
+    signed int * output_data[NUM_ANTENNA_PORT_2];
+    signed int * precoding_pbch_data_buffer[NUM_ANTENNA_PORT_2];
+    signed int * precoding_pcfich_data_buffer[NUM_ANTENNA_PORT_2];
+    signed int * precoding_pdcch_data_buffer[NUM_ANTENNA_PORT_2];
+    signed int * precoding_phich_data_buffer[NUM_ANTENNA_PORT_2];
+    TDSP_Type dspType;
+
+    unsigned int process_start;
+
+    glbCoreId = CSL_chipReadReg (CSL_CHIP_DNUM);
+    /********************缓存配置**********************/
+#ifndef SIMULATOR
+    CACHE_setL1PSize(CACHE_L1_32KCACHE);
+    CACHE_setL1DSize(CACHE_L1_32KCACHE);
+    CACHE_setL2Size(CACHE_256KCACHE);
+    CACHE_invAllL1p(CACHE_WAIT);
+    CACHE_wbInvAllL1d(CACHE_WAIT);
+
+    /*************MAR寄存器配置************************/
+    /*make other cores local memory cacheable and prefetchable*/
+    for(i=16; i<24; i++)
+    	CGEM_regs->MAR[i]=1|(1<<CSL_CGEM_MAR0_PFX_SHIFT);
+    /*make DDR cacheable and non-prefetchable*/
+    for(i=128; i<256; i++)
+    	CGEM_regs->MAR[i]=1|(1<<CSL_CGEM_MAR0_PFX_SHIFT);
+    /*make other space non-cacheable and non-prefetchable*/
+    for(i=24; i<128; i++)
+    	CGEM_regs->MAR[i]=0;
+#endif
+
+#ifndef SIMULATOR
+    dspType= Get_dsp_type();
+    if(NYQUIST==dspType||TRUBO_NYQUIST==dspType)
+    {
+        //DSP core speed
+        //KeyStone_main_PLL_init (236, 29);   //for 122.88MHz input clock
+
+    	//DDR speed = 66.67*20/1= 1333
+    	KeyStone_DDR_PLL_init (20, 1);
+
+        Nyquist_EVM_DDR_Init(666.667);  //for 1333Mbps
+        //serdes_cfg.commonSetup.inputRefClock_MHz = 250;//156.25;
+    }
+    else
+    {
+    	puts("Unknown DSP type!");
+        return;
